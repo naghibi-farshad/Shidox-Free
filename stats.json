@@ -1,11 +1,11 @@
 {
   "version": 1,
   "brand": "Shidox Free",
-  "lastRun": "2026-11-07T17:27:38+00:00",
-  "total": 84,
-  "fresh24h": 84,
-  "npvFiles": 0,
-  "npvLinks": 0,
+  "lastRun": "2026-11-07T17:57:28+00:00",
+  "total": 95,
+  "fresh24h": 11,
+  "npvFiles": 11,
+  "npvLinks": 83,
   "updateEveryHours": 5,
   "retentionHours": 48,
   "perChannel": [
@@ -67,15 +67,15 @@
     },
     {
       "id": "irCONFIG",
-      "count": 0,
-      "fresh": 0,
+      "count": 8,
+      "fresh": 51,
       "ok": true,
       "error": null
     },
     {
       "id": "ConfigX2ray",
-      "count": 1,
-      "fresh": 5,
+      "count": 4,
+      "fresh": 32,
       "ok": true,
       "error": null
     }
