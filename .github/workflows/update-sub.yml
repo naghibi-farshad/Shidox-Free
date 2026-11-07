@@ -1,0 +1,44 @@
+name: Update Shidox Free sub
+
+on:
+  schedule:
+    - cron: "7 */5 * * *" # every 5 hours, like Axiom
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4 telethon
+
+      - name: Fetch SaKit tables (not vendored in the repo)
+        run: |
+          cd scripts
+          for f in npv_tables.json npvs_tables.json npvs_gen2_tables.bin.z; do
+            [ -f "$f" ] || curl -sL --max-time 60 -o "$f" "https://raw.githubusercontent.com/AmirStillAlive/SaKit/main/$f"
+          done
+
+      - name: Collect configs
+        env:
+          TG_API_ID: ${{ secrets.TG_API_ID }}
+          TG_API_HASH: ${{ secrets.TG_API_HASH }}
+          TG_SESSION: ${{ secrets.TG_SESSION }}
+        run: python scripts/collect.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "shidox-collector"
+          git config user.email "collector@shidox.local"
+          git add sub.txt sub_plain.txt stats.json history/archive.json README.md
+          git diff --cached --quiet || git commit -m "sub: auto-update $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push
