@@ -54,6 +54,7 @@ BASE = Path(__file__).resolve().parent.parent
 SUB_TXT = BASE / "sub.txt"
 SUB_PLAIN = BASE / "sub_plain.txt"
 ARCHIVE = BASE / "history" / "archive.json"
+GEO_CACHE = BASE / "history" / "geo_cache.json"
 STATS_JSON = BASE / "stats.json"
 README = BASE / "README.md"
 SCRIPTS = Path(__file__).resolve().parent
@@ -115,6 +116,24 @@ def b64decode_loose(s: str) -> bytes:
         return base64.urlsafe_b64decode(s)
 
 
+def _str_field(v):
+    """Coerce a vmess JSON field to a plain string. Some configs carry
+    lists here (e.g. "add": ["1.2.3.4"] or "port": [443]) which crash
+    set/dict lookups with 'unhashable type: list'."""
+    if v is None:
+        return None
+    if isinstance(v, str):
+        return v
+    if isinstance(v, (list, tuple)):
+        for item in v:
+            if isinstance(item, str) and item:
+                return item
+            if isinstance(item, (int, float)):
+                return str(item)
+        return None
+    return str(v)
+
+
 def extract_host(line: str):
     line = line.strip()
     scheme = line.split("://", 1)[0].lower()
@@ -122,7 +141,7 @@ def extract_host(line: str):
         if scheme == "vmess":
             payload = line.split("://", 1)[1].split("#")[0].split("?")[0]
             j = json.loads(b64decode_loose(payload).decode("utf-8", "replace"))
-            return scheme, j.get("add")
+            return scheme, _str_field(j.get("add"))
         if scheme == "ss":
             rest = line.split("://", 1)[1].split("#")[0]
             if "@" in rest:
@@ -149,7 +168,7 @@ def server_key(line: str):
         if scheme == "vmess":
             payload = line.split("://", 1)[1].split("#")[0]
             j = json.loads(b64decode_loose(payload).decode("utf-8", "replace"))
-            return (scheme, (j.get("add") or "").lower(), j.get("port"))
+            return (scheme, (_str_field(j.get("add")) or "").lower(), _str_field(j.get("port")))
         if scheme == "ss":
             rest = line.split("://", 1)[1].split("#")[0]
             query = ""
@@ -463,13 +482,14 @@ def main() -> int:
     ap.add_argument("--out", default=None, help="override output dir (testing)")
     args = ap.parse_args()
 
-    global SUB_TXT, SUB_PLAIN, ARCHIVE, STATS_JSON, README
+    global SUB_TXT, SUB_PLAIN, ARCHIVE, GEO_CACHE, STATS_JSON, README
     if args.out:
         outdir = Path(args.out)
         outdir.mkdir(parents=True, exist_ok=True)
         SUB_TXT = outdir / "sub.txt"
         SUB_PLAIN = outdir / "sub_plain.txt"
         ARCHIVE = outdir / "archive.json"
+        GEO_CACHE = outdir / "geo_cache.json"
         STATS_JSON = outdir / "stats.json"
         README = outdir / "README.md"
 
@@ -489,7 +509,14 @@ def main() -> int:
         if now_ts - int(e.get("firstSeen", now_ts)) <= RETENTION.total_seconds()
     ]
     pruned = len(archive.get("entries", [])) - len(entries)
-    keys = {e["key"] for e in entries}
+    # Archive keys are stored in JSON as lists, which are unhashable:
+    # normalise them back to tuples of strings on load, or the second
+    # run always crashes here with "unhashable type: 'list'".
+    keys = {
+        tuple(str(k) if k is not None else None for k in e["key"])
+        if isinstance(e["key"], (list, tuple)) else e["key"]
+        for e in entries
+    }
     print(f"archive: {len(entries)} kept, {pruned} pruned (>{RETENTION})")
 
     per_channel: dict[str, dict] = {
@@ -499,7 +526,9 @@ def main() -> int:
     fresh_keys: set[str] = set()
 
     def add_entry(raw_link: str, channel: str, dt: datetime, kind: str):
-        key = server_key(raw_link)
+        # Normalise to the same str-tuple form used for stored keys,
+        # so a vmess int port matches its stored string port.
+        key = tuple(str(k) if k is not None else None for k in server_key(raw_link))
         if key in keys or key[1] is None:
             return
         keys.add(key)
@@ -575,9 +604,21 @@ def main() -> int:
 
     # ---- GeoIP + rename ----
     hosts = sorted({extract_host(l)[1] for l in raw_lines if extract_host(l)[1]})
+    # Persistent geo cache (history/geo_cache.json): a failed ip-api lookup
+    # must not wipe every country flag to 🌐. Cached hosts are reused and
+    # only uncached hosts are looked up, which also cuts ip-api traffic.
+    try:
+        geo_cache = json.loads(GEO_CACHE.read_text(encoding="utf-8"))
+    except Exception:
+        geo_cache = {}
     geo = {}
-    for i in range(0, len(hosts), 100):
-        geo.update(geoip_batch(hosts[i:i + 100]))
+    for h in hosts:
+        cc = geo_cache.get(h)
+        if cc:
+            geo[h] = {"status": "success", "countryCode": cc, "query": h}
+    uncached = [h for h in hosts if h not in geo]
+    for i in range(0, len(uncached), 100):
+        geo.update(geoip_batch(uncached[i:i + 100]))
     failed = [h for h in hosts if geo.get(h, {}).get("status") != "success"]
     if failed:
         ok = {}
@@ -596,6 +637,16 @@ def main() -> int:
             g = ipgeo.get(ip, {})
             geo[h] = {"status": g.get("status"), "country": g.get("country"),
                       "countryCode": g.get("countryCode"), "via_ip": ip}
+
+    # Save every successful lookup back to the cache for the next run.
+    try:
+        for h, g in geo.items():
+            if (g or {}).get("countryCode"):
+                geo_cache[h] = g["countryCode"]
+        GEO_CACHE.parent.mkdir(parents=True, exist_ok=True)
+        GEO_CACHE.write_text(json.dumps(geo_cache, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    except Exception as e:
+        print(f"  geo cache save failed: {e}")
 
     cf_nets = load_cf_nets()
     ip_cache, cf_cache = {}, {}
