@@ -1,11 +1,11 @@
 {
   "version": 1,
   "brand": "Shidox Free",
-  "lastRun": "2026-11-08T23:40:07+00:00",
+  "lastRun": "2026-11-09T06:11:20+00:00",
   "total": 215,
-  "fresh24h": 37,
-  "npvFiles": 10,
-  "npvLinks": 88,
+  "fresh24h": 0,
+  "npvFiles": 9,
+  "npvLinks": 83,
   "updateEveryHours": 5,
   "retentionHours": 48,
   "perChannel": [
@@ -19,7 +19,7 @@
     {
       "id": "FreakConfig",
       "count": 20,
-      "fresh": 27,
+      "fresh": 30,
       "ok": true,
       "error": null
     },
@@ -40,7 +40,7 @@
     {
       "id": "V2rayBaaz",
       "count": 51,
-      "fresh": 28,
+      "fresh": 19,
       "ok": true,
       "error": null
     },
@@ -61,14 +61,14 @@
     {
       "id": "v2ray26",
       "count": 6,
-      "fresh": 2,
+      "fresh": 1,
       "ok": true,
       "error": null
     },
     {
       "id": "irCONFIG",
       "count": 20,
-      "fresh": 57,
+      "fresh": 52,
       "ok": true,
       "error": null
     },
