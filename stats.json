@@ -1,9 +1,9 @@
 {
   "version": 1,
   "brand": "Shidox Free",
-  "lastRun": "2026-11-15T23:57:22+00:00",
-  "total": 195,
-  "fresh24h": 27,
+  "lastRun": "2026-11-16T06:16:10+00:00",
+  "total": 183,
+  "fresh24h": 10,
   "npvFiles": 8,
   "npvLinks": 53,
   "updateEveryHours": 5,
@@ -11,7 +11,7 @@
   "perChannel": [
     {
       "id": "vpn_Click",
-      "count": 58,
+      "count": 56,
       "fresh": 21,
       "ok": true,
       "error": null
@@ -19,13 +19,13 @@
     {
       "id": "FreakConfig",
       "count": 11,
-      "fresh": 27,
+      "fresh": 28,
       "ok": true,
       "error": null
     },
     {
       "id": "V2RAYROZ",
-      "count": 1,
+      "count": 0,
       "fresh": 5,
       "ok": true,
       "error": null
@@ -39,8 +39,8 @@
     },
     {
       "id": "V2rayBaaz",
-      "count": 40,
-      "fresh": 23,
+      "count": 39,
+      "fresh": 21,
       "ok": true,
       "error": null
     },
@@ -53,7 +53,7 @@
     },
     {
       "id": "V2rayng_Fast",
-      "count": 35,
+      "count": 33,
       "fresh": 33,
       "ok": true,
       "error": null
@@ -67,7 +67,7 @@
     },
     {
       "id": "irCONFIG",
-      "count": 41,
+      "count": 35,
       "fresh": 37,
       "ok": true,
       "error": null
